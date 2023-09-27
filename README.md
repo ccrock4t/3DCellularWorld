@@ -5,4 +5,4 @@ This type of simulator is sometimes referred to as a 3d "falling sand simulator"
 ![picture](https://github.com/ccrock4t/3DCellularWorld/blob/main/Assets/Images/background.PNG?raw=true)
 
 
-![flying](https://github.com/ccrock4t/3DCellularWorld/assets/15344554/d553a1ce-785c-41b0-98ad-02bfde1a1723)
+![picture](https://github.com/ccrock4t/3DCellularWorld/blob/main/Assets/Images/flying.gif?raw=true)
