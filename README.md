@@ -1,10 +1,10 @@
 # 3DCellularWorld
 
-For more info read the [Wiki](https://github.com/ccrock4t/3DCellularWorld/wiki).
-
 A simulator game where you can create and edit 3D cellular automaton voxel worlds using various elements.
 
 This type of simulator is sometimes referred to as a 3d "falling sand simulator". This one is implemented using cellular automata for the benefits of parallelization.
+
+For more info read the [Wiki](https://github.com/ccrock4t/3DCellularWorld/wiki).
 
 Video: https://www.youtube.com/watch?v=o1E0cWx2p6w
 
