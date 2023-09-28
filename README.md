@@ -1,5 +1,7 @@
 # 3DCellularWorld
 
+For more info read the ![Wiki](https://github.com/ccrock4t/3DCellularWorld/wiki).
+
 A simulator game where you can create and edit 3D cellular automaton voxel worlds using various elements.
 
 ![pictureOfElements](https://github.com/ccrock4t/3DCellularWorld/blob/main/Assets/Images/elements.png?raw=true)
