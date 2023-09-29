@@ -1,0 +1,609 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+//todo was_modified
+struct CellInfo
+{
+    int current_state;
+    int next_state;
+    int last_frame_modified;
+};
+
+#define ELEMENT_EMPTY 0
+#define ELEMENT_STONE 1
+#define ELEMENT_SAND 2
+#define ELEMENT_WATER 3
+#define ELEMENT_LAVA 4
+#define ELEMENT_STEAM 5
+
+bool IsSolid(int element)
+{
+    return element == ELEMENT_STONE
+        || element == ELEMENT_SAND;
+}
+
+
+#define MAX_NEIGHBORS 7 // 8 in a neighborhood minus 1
+
+
+RWStructuredBuffer<CellInfo> cell_grid;
+RWStructuredBuffer<int3> block_grid;
+RWStructuredBuffer<int3> debug_buffer;
+int AUTOMATA_SIZE_X;
+int AUTOMATA_SIZE_Y;
+int AUTOMATA_SIZE_Z;
+int frame_mod2;
+int frame;
+
+
+
+
+
+/// <summary>
+///     Returns a vector 3 where:
+///         x is the current state
+///         y is whether this cell was modified this frame
+///         z is the previous state
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <returns></returns>
+CellInfo GetCellInfo(int i)
+{
+    return cell_grid[i];
+}
+
+int Index_FlatFromVector3(int x, int y, int z)
+{
+    return x + AUTOMATA_SIZE_X * y + AUTOMATA_SIZE_X * AUTOMATA_SIZE_Y * z;
+}
+
+
+int3 Index_int3FromFlat(int i)
+{
+    int x = i % AUTOMATA_SIZE_X;
+    int y = floor(i / AUTOMATA_SIZE_X) % AUTOMATA_SIZE_Y;
+    int z = floor(i / (AUTOMATA_SIZE_X * AUTOMATA_SIZE_Y));
+    return int3(x, y, z);
+}
+
+
+/// <summary>
+///     Returns a vector 3 where:
+///         x is the current state
+///         y is whether this cell was modified this frame
+///         z is the previous state
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <returns></returns>
+CellInfo GetCellInfo(int x, int y, int z)
+{
+    return GetCellInfo(Index_FlatFromVector3(x, y, z));
+}
+
+bool IsOutOfBounds(int x, int y, int z)
+{
+    return (x < 0 || y < 0 || z < 0 || x >= AUTOMATA_SIZE_X || y >= AUTOMATA_SIZE_Y || z >= AUTOMATA_SIZE_Z);
+}
+
+/// <summary>
+///     Set the next state of a cell. Also flags the cell as modified during this frame.
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <param name="state"></param>
+void SetCellNextState(int x, int y, int z, int state)
+{
+    int i = Index_FlatFromVector3(x, y, z);
+    CellInfo value = cell_grid[i];
+    value.next_state = state;
+    value.last_frame_modified = frame;
+    cell_grid[i] = value;
+}
+
+/// <summary>
+///     Get the next state of a cell
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <returns></returns>
+int GetCellNextState(int i)
+{
+    return cell_grid[i].next_state;
+}
+
+
+
+/// <summary>
+///     Set the next state of a cell. Also flags the cell as modified during this frame.
+/// </summary>
+/// <param name="index"></param>
+/// <param name="state"></param>
+void SetCellNextState(int3 index, int state)
+{
+    SetCellNextState(index.x, index.y, index.z, state);
+}
+
+/// <summary>
+///     Get the next state of a cell
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <returns></returns>
+int GetCellNextState(int x, int y, int z)
+{
+    int i = Index_FlatFromVector3(x, y, z);
+    return GetCellNextState(i);
+}
+
+
+/// <summary>
+///     Get the next state of a cell
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <returns></returns>
+int GetCellNextState(int3 index)
+{
+    return GetCellNextState(index.x, index.y, index.z);
+}
+
+
+
+
+
+/// <summary>
+///     Get the current state of a cell
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <returns></returns>
+int GetCellCurrentState(int i)
+{
+    return cell_grid[i].current_state;
+}
+
+/// <summary>
+///     Get the current state of a cell
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <returns></returns>
+int GetCellCurrentState(int x, int y, int z)
+{
+    int i = Index_FlatFromVector3(x, y, z);
+    return GetCellCurrentState(i);
+}
+
+/// <summary>
+///     Get the current state of a cell
+/// </summary>
+/// <param name="index"></param>
+/// <returns></returns>
+int GetCellCurrentState(int3 index)
+{
+    return GetCellCurrentState(index.x, index.y, index.z);
+}
+
+
+/// <summary>
+/// Given the cell and current frame, determine the cell's position in the block
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <returns></returns>
+int3 GetCellBlockOffset()
+{
+
+    // classic checkerboard
+    switch (frame_mod2)
+    {
+        case 0: //
+            return int3(0, 0, 0);
+            break;
+        case 1:
+            return int3(1, 1, 1);
+            break;
+        default:
+            break;
+    }
+    return int3(-1,-1,-1);
+}
+
+
+/// <summary>
+/// Return what the result would be if these 2 elements tried to reaction
+/// </summary>
+/// <param name="cell_state1"></param>
+/// <param name="cell_state2"></param>
+/// <returns></returns>
+int ReactionResult(int cell_state1, int cell_state2)
+{
+    // check in ascending order of Enum value
+    if (cell_state1 == ELEMENT_LAVA || cell_state2 == ELEMENT_LAVA)
+    {
+        if (cell_state1 == ELEMENT_WATER || cell_state2 == ELEMENT_WATER) return ELEMENT_STONE; // Lava and Water make stone
+
+    }
+    else if (cell_state1 == ELEMENT_STEAM || cell_state2 == ELEMENT_STEAM)
+    {
+        if (cell_state1 == ELEMENT_WATER || cell_state2 == ELEMENT_WATER) return ELEMENT_WATER; // Water and Steam make Water
+    }
+
+    return -1;
+}
+
+
+/// <summary>
+///     Try to move to an empty cell. If the cell is not empty, tries to chemically react.
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <param name="nx"></param>
+/// <param name="ny"></param>
+/// <param name="nz"></param>
+/// <returns>Did update cell. Otherwise failed to update cell (could not move nor react)</returns>
+bool CheckNeighborAndTrySwap(int x, int y, int z, int nx, int ny, int nz, int cell_state)
+{
+    if (IsOutOfBounds(nx, ny, nz)) return false;
+    CellInfo neighbor_info = GetCellInfo(nx, ny, nz);
+    int neighbor_state = neighbor_info.current_state;
+    bool is_air = (neighbor_state == ELEMENT_EMPTY);
+    bool can_displace = IsSolid(cell_state) && !IsSolid(neighbor_state);
+
+    // physical reaction
+    if ((is_air || can_displace) && neighbor_info.last_frame_modified != frame)
+    {
+        SetCellNextState(x, y, z, neighbor_state);
+        SetCellNextState(nx, ny, nz, cell_state);
+        return true;
+    }
+
+    // chemical reaction
+    int reaction_result = ReactionResult(cell_state, neighbor_state);
+    if(reaction_result != -1 && neighbor_info.last_frame_modified != frame)
+    {
+        SetCellNextState(x, y, z, reaction_result);
+        SetCellNextState(nx, ny, nz, reaction_result);
+        return true;
+    }
+
+    return false;
+}
+
+bool TrySwap(int x, int y, int z, int state, in int3 neighbor_offsets[7])
+{
+    int num_of_neighbors = 0;
+    for (int i = 0; i < MAX_NEIGHBORS; i++)
+    {
+        int neighbor = neighbor_offsets[i];
+        if(neighbor != 0){
+            num_of_neighbors++;
+        }
+    }
+
+    int3 neighbor_offset;
+    int nx, ny, nz;
+    for (int i = 0; i < num_of_neighbors; i++)
+    {
+        neighbor_offset = neighbor_offsets[i];
+        nx = x + neighbor_offset.x;
+        ny = y + neighbor_offset.y;
+        nz = z + neighbor_offset.z;
+        if (CheckNeighborAndTrySwap(x, y, z, nx, ny, nz, state)) return true;
+    }
+
+    return false;
+}
+
+
+
+
+/*
+    * 
+    * 
+    * 
+    *     PROPERTIES OF ELEMENTS
+    *     
+    *     PHYSICAL AND CHEMICAL REACTIVE
+    *     
+    *     Use these functions to build new elements
+    * 
+    * 
+    * 
+    */
+
+/// <summary>
+/// Tries to move directly down
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <param name="offset.x"></param>
+/// <param name="offset.y"></param>
+/// <param name="offset.z"></param>
+/// <param name="state"></param>
+bool PropertyGravity(int x, int y, int z, int3 offset, int state)
+{
+    if (y == 0) return false; // global bottom, can't move down - implicitly impenetrable
+    if (offset.y == 0) return false; // at bottom of neighborhood, cant move down - implicitly impenetrable
+    int ny = y - 1; // check directly below
+    return CheckNeighborAndTrySwap(x, y, z, x, ny, z, state);
+}
+
+/// <summary>
+/// Tries to move both down and horizontal (i.e., move downwards diagonally, aka slide)
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <param name="offset.x"></param>
+/// <param name="offset.y"></param>
+/// <param name="offset.z"></param>
+/// <param name="state"></param>
+bool PropertySlide(int x, int y, int z, int3 offset, int state)
+{
+    if (offset.y == 0) return false; // at bottom of neighborhood, cant move down - implicitly impenetrable
+
+    // check neighbors below
+    int3 neighbor_offsets[7];
+
+    int neighbor_direction_x = (offset.x == 0) ? 1 : -1;
+    int neighbor_direction_z = (offset.z == 0) ? 1 : -1;
+
+    neighbor_offsets[0] = int3(neighbor_direction_x, -1, neighbor_direction_z);0;
+    neighbor_offsets[1] = int3(neighbor_direction_x, -1, 0);
+    neighbor_offsets[2] = int3(0, -1, neighbor_direction_z);
+    neighbor_offsets[3] = 0;
+    neighbor_offsets[4] = 0;
+    neighbor_offsets[5] = 0;
+    neighbor_offsets[6] = 0;
+
+    return TrySwap(x, y, z, state, neighbor_offsets);
+}
+
+/// <summary>
+///     Tries to move on the level plane
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <param name="offset.x"></param>
+/// <param name="offset.y"></param>
+/// <param name="offset.z"></param>
+/// <param name="state"></param>
+bool PropertyFlow(int x, int y, int z, int3 offset, int state)
+{
+    if (y == 0) return false;
+    int neighbor_below_index = Index_FlatFromVector3(x, y-1, z);
+
+    int3 neighbor_offsets[7];
+
+    // whcih directions are the neighbors in the x and z directions?
+    int neighbor_direction_x = (offset.x == 0) ? 1 : -1;
+    int neighbor_direction_z = (offset.z == 0) ? 1 : -1;
+
+    // try to move on the level plane
+    neighbor_offsets[0] = int3(neighbor_direction_x, 0, neighbor_direction_z);
+    neighbor_offsets[1] = int3(0, 0, neighbor_direction_z);
+    neighbor_offsets[2] = int3(neighbor_direction_x, 0, 0);
+    neighbor_offsets[3] = 0;
+    neighbor_offsets[4] = 0;
+    neighbor_offsets[5] = 0;
+    neighbor_offsets[6] = 0;
+
+    return TrySwap(x, y, z, state, neighbor_offsets);
+}
+
+/// <summary>
+/// Tries to move both diagonally, flipping both all coordinates
+/// </summary>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="z"></param>
+/// <param name="offset.x"></param>
+/// <param name="offset.y"></param>
+/// <param name="offset.z"></param>
+/// <param name="state"></param>
+bool PropertyBBM(int x, int y, int z, int3 offset, int state)
+{
+    int nx, ny, nz;
+    // check neighbors below
+
+    int neighbor_direction_x = (offset.x == 0) ? 1 : -1;
+    int neighbor_direction_y = (offset.y == 0) ? 1 : -1;
+    int neighbor_direction_z = (offset.z == 0) ? 1 : -1;
+
+    int3 neighbor_offsets[7];
+
+    neighbor_offsets[0] = int3(neighbor_direction_x, neighbor_direction_y, neighbor_direction_z);
+
+    neighbor_offsets[1] = int3(0, neighbor_direction_y, neighbor_direction_z);
+    neighbor_offsets[2] = int3(neighbor_direction_x, neighbor_direction_y, 0);
+    neighbor_offsets[3] = int3(neighbor_direction_x, 0, neighbor_direction_z);
+
+    neighbor_offsets[4] = int3(0, neighbor_direction_y, 0);
+    neighbor_offsets[5] = int3(0, 0, neighbor_direction_z);
+    neighbor_offsets[6] = int3(neighbor_direction_x, 0, 0);
+
+
+    return TrySwap(x,y,z,state, neighbor_offsets);
+}
+
+/// <summary>
+///     Apply the Stone Rule
+///     It attempts to move straight downward. Otherwise stays put.
+/// </summary>
+void StoneRule(int x, int y, int z, int3 offset, int state)
+{
+    //try to move down
+    if(PropertyGravity(x, y, z, offset, state)) return;
+}
+
+
+/// <summary>
+///     Apply the Sand Rule
+///     It attempts to move downward in any direction. Otherwise stays put.
+/// </summary>
+void SandRule(int x, int y, int z, int3 offset, int state)
+{
+    //try to move down
+    if (PropertyGravity(x, y, z, offset, state)) return;
+    //try to move slide down
+    if (PropertySlide(x, y, z, offset, state)) return;
+}
+
+/// <summary>
+///     Apply the Water Rule
+///     It attempts to move downward in any direction. If it cannot, tries to move on the level plane. Otherwise stays put.
+///     
+/// </summary>
+void WaterRule(int x, int y, int z, int3 offset, int state)
+{
+    //try to move down
+    if (PropertyGravity(x, y, z, offset, state)) return;
+    //try to slide down
+    if (PropertySlide(x, y, z, offset, state)) return;
+    // try to flow horizontally
+    if (PropertyFlow(x, y, z, offset, state)) return;
+}
+
+/// <summary>
+///     Apply the Lava Rule
+///     It attempts to move downward in any direction. If it cannot, tries to move on the level plane. Otherwise stays put.
+///     
+/// </summary>
+void LavaRule(int x, int y, int z, int3 offset, int state)
+{
+    //try to move down
+    if (PropertyGravity(x, y, z, offset, state)) return;
+    //try to slide down
+    if (PropertySlide(x, y, z, offset, state)) return;
+    // try to flow horizontally
+    if (PropertyFlow(x, y, z, offset, state)) return;
+}
+
+/// <summary>
+///     Apply the Steam Rule
+///     It attempts to move diagonally in any direction. If it cannot, bounces off the object it collides with.
+///     
+/// </summary>
+void SteamRule(int x, int y, int z, int3 offset, int state)
+{
+    //move around like a billiard ball
+    if (PropertyBBM(x, y, z, offset, state)) return;
+}
+
+/// <summary>
+/// Uses local rules to compute the next state / value for the given cell index
+/// </summary>
+/// <param name="cellIndex"></param>
+void UpdateCell(int x, int y, int z, int3 offset)
+{
+    int my_state = GetCellCurrentState(x, y, z);
+    //apply rules
+    switch (my_state)
+    {
+        case (ELEMENT_STONE):
+            StoneRule(x, y, z, offset, my_state);
+            break;
+        case (ELEMENT_SAND):
+            SandRule(x, y, z, offset, my_state);
+            break;
+        case (ELEMENT_WATER):
+            WaterRule(x, y, z, offset, my_state);
+            break;
+        case (ELEMENT_LAVA):
+            LavaRule(x, y, z, offset, my_state);
+            break;
+        case (ELEMENT_STEAM):
+            SteamRule(x, y, z, offset, my_state);
+            break;
+        default:
+            //WaterRule(x, y, z, offset, my_state);
+            break;
+    }
+
+
+}
+
+void Execute(int i)
+{
+    int3 bottom_bottom_left_block_corner_cell_idx = block_grid[i]; // starting at some corner
+
+    int3 block_offset = GetCellBlockOffset();
+    bottom_bottom_left_block_corner_cell_idx.x -= block_offset.x;
+    bottom_bottom_left_block_corner_cell_idx.y -= block_offset.y;
+    bottom_bottom_left_block_corner_cell_idx.z -= block_offset.z;
+
+    // with some offset
+    //if(bottom_bottom_left_block_corner_cell_idx.y < 50) 
+    int x, y, z;
+    int3 cell_offset = int3(0,0,0);
+    int passes = 2;
+    for(int pass_number = 0; pass_number < passes; pass_number++){
+        for(int ox = 0; ox <= 1; ox++)
+        {
+            x = bottom_bottom_left_block_corner_cell_idx.x + ox;
+            for (int oy = 0; oy <= 1; oy++)
+            {
+                y = bottom_bottom_left_block_corner_cell_idx.y + oy;
+                for (int oz = 0; oz <= 1; oz++)
+                {
+                    z = bottom_bottom_left_block_corner_cell_idx.z + oz;
+
+                    //cell index
+                    if (IsOutOfBounds(x, y, z)) {
+                        //if(y > 0) debug_buffer[0] = int3(x,y,z);
+                        continue;
+                        }
+                    int j = Index_FlatFromVector3(x, y, z);
+                    
+
+                    if(pass_number == 0){
+                        cell_grid[j].current_state = cell_grid[j].next_state;
+                    }else if(pass_number == 1){
+                        CellInfo info = GetCellInfo(j);
+                        
+                        //skip air cells 
+                        if (info.current_state == ELEMENT_EMPTY || info.last_frame_modified == frame) continue;
+                        
+                        cell_offset.x = ox;
+                        cell_offset.y = oy;
+                        cell_offset.z = oz;
+                        //compute the next state
+                        UpdateCell(x, y, z, cell_offset); // get what the next state for this cell should be
+                    }
+
+
+
+                }
+            }
+    }
+    }
+
+}
+
+
+/*
+    main function / kernel
+*/ 
+int index_offset;
+#define NUM_THREADS 64
+[numthreads(NUM_THREADS,1,1)]
+void CSMain (uint3 thread_id: SV_DispatchThreadID)
+{
+    int i = thread_id.x + index_offset;
+    Execute(i);
+}
