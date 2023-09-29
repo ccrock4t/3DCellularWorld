@@ -1,8 +1,10 @@
+using System;
 using Unity.Mathematics;
 using UnityEngine;
 
 public class GlobalConfig : MonoBehaviour
 {
+    [Serializable]
     public enum ProcessingMethod
     {
         CPU,

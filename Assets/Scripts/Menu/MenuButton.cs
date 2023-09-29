@@ -1,3 +1,4 @@
+using Newtonsoft.Json.Bson;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,10 +6,17 @@ using UnityEngine.SceneManagement;
 
 public class MenuButton : MonoBehaviour
 {
+
+    GameObject settings_menu_panel;
     // Start is called before the first frame update
     void Start()
     {
-        
+        settings_menu_panel.SetActive(false);
+    }
+
+    private void Awake()
+    {
+        settings_menu_panel = GameObject.Find("SettingsMenu");
     }
 
     // Update is called once per frame
@@ -29,7 +37,7 @@ public class MenuButton : MonoBehaviour
 
     public void OpenSettings()
     {
-
+        settings_menu_panel.SetActive(true);
     }
 
     public void QuitGame()
