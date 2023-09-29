@@ -380,7 +380,7 @@ public class WorldAutomatonCPU : WorldAutomaton
     {
         if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
         {
-           // RunMouseButtonBehaviors(CanvasNav.GetButtonCellState(), this.brush_size);
+           RunMouseButtonBehaviors(CanvasNav.GetButtonCellState(), this.brush_size);
         }
     }
 
