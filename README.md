@@ -17,4 +17,6 @@ Video: https://www.youtube.com/watch?v=o1E0cWx2p6w
 ![pictureOfElements](https://github.com/ccrock4t/3DCellularWorld/blob/main/Assets/Images/elements.gif?raw=true)
 
 # Requirements
+Built with Unity.
+
 You may select to run the algorithm on either your CPU or your GPU. The two versions look different: the CPU version renders meshes of voxels which are then drawn on the camera, whereas the GPU version directly draws the relevant voxel color for each camera pixel.
