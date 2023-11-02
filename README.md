@@ -3,6 +3,9 @@
 A simulator game where you can create and edit 3D cellular automaton voxel worlds using various elements.
 
 This type of simulator is sometimes referred to as a 3d "falling sand simulator". This one is implemented using cellular automata for the benefits of parallelization.
+
+
+
 ## Writing
 Read the [Paper](https://cis.temple.edu/tagit/publications/TAGIT-TR-18.pdf).
 
@@ -25,3 +28,8 @@ https://www.youtube.com/watch?v=o1E0cWx2p6w
 Built with Unity.
 
 You may select to run the algorithm on either your CPU or your GPU. The two versions look different: the CPU version renders meshes of voxels which are then drawn on the camera, whereas the GPU version directly draws the relevant voxel color for each camera pixel.
+
+# Acknowledgments
+
+This project was started in Summer 2022 as an extension of the Udemy Minecraft Voxel World course: https://www.udemy.com/course/unityminecraft/learn/lecture/28605694#overview 
+It was completed in Fall 2022, and released in Fall 2023 along with a technical report.
