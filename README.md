@@ -31,5 +31,6 @@ You may select to run the algorithm on either your CPU or your GPU. The two vers
 
 # Acknowledgments
 
-This project was started in Summer 2022 as an extension of the Udemy Minecraft Voxel World course: https://www.udemy.com/course/unityminecraft/learn/lecture/28605694#overview 
+This project was started in Summer 2022 as an extension of the Udemy Minecraft Voxel World course: [https://www.udemy.com/course/unityminecraft/learn/lecture/28605694#overview ](https://www.udemy.com/course/unityminecraft/)
+
 It was completed in Fall 2022, and released in Fall 2023 along with a technical report.
