@@ -6,7 +6,7 @@ This type of simulator is sometimes referred to as a 3d "falling sand simulator"
 
 
 
-## Writing
+## Reading Materials
 Read the [Paper](https://cis.temple.edu/tagit/publications/TAGIT-TR-18.pdf).
 
 Read the [Wiki](https://github.com/ccrock4t/3DCellularWorld/wiki).
