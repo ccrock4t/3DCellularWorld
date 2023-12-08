@@ -27,10 +27,10 @@ public class GlobalConfig : MonoBehaviour
 
     // === World voxel automaton === 
     public static ProcessingMethod voxel_processing_method = ProcessingMethod.CPU;
-    public static SmoothingMethod voxel_mesh_smoothing_method = SmoothingMethod.None;
+    public static SmoothingMethod voxel_mesh_smoothing_method = SmoothingMethod.MarchingCubes;
     public GameObject world_automaton_game_object;
     public static WorldAutomaton world_automaton;
-    public static readonly int3 WORLD_AUTOMATON_DIMENSIONS = new int3(128, 32, 128); // number cells in each dimension. Must be a multiple of 2
+    public static readonly int3 WORLD_AUTOMATON_DIMENSIONS = new int3(32, 32, 32); // number cells in each dimension. Must be a multiple of 2
     public static float WORLD_AUTOMATA_SECONDS_PER_STEP = 0.01f; // number of seconds per step of automata
     // ============
 

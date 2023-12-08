@@ -1,8 +1,11 @@
+using System.Collections;
+using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using static WorldAutomaton;
 using static WorldAutomaton.Elemental;
 using WorldCellInfo = CellInfo<WorldAutomaton.Elemental.Element>;
 
@@ -98,8 +101,10 @@ public struct ParallelCalculateNextWorldState : IJobParallelFor
         {
             case 0: //
                 return (0, 0, 0);
+                break;
             case 1:
                 return (1, 1, 1);
+                break;
         }
         Debug.LogError("error");
         return (0, 0, 0);
@@ -307,6 +312,7 @@ public struct ParallelCalculateNextWorldState : IJobParallelFor
     /// <param name="state"></param>
     bool PropertyBBM(int x, int y, int z, int ox, int oy, int oz, Element state)
     {
+        int nx, ny, nz;
         // check neighbors below
         NativeList<int3> neighbor_offsets = new NativeList<int3>(Allocator.Temp);
 
