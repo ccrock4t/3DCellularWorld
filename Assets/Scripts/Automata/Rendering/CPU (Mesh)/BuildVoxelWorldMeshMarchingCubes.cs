@@ -9,7 +9,7 @@ using static VoxelUtils;
 using WorldCellInfo = CellInfo<WorldAutomaton.Elemental.Element>;
 using System;
 using System.Runtime.CompilerServices;
-
+using System.Collections.Generic;
 
 /// <summary>
 /// Parallel calculate all possible vertices in the world, so they can be accessed later.
@@ -66,6 +66,30 @@ public struct BuildVoxelWorldMeshMarchingCubes : IJobParallelFor
         var result = Polygonise(index, voxelCube);
 
         if (result == null) return; // the mesh is entirely hidden by other meshes, so nothing to display
+
+        if(state == Element.Empty)
+        {
+            Dictionary<Element, int> counts= new();
+            foreach(Element? e in voxelCube)
+            {
+               // Debug.Log(e);
+                if (e == null || e == Element.Empty) continue;
+                if (!counts.ContainsKey((Element)e)) counts.Add((Element)e, 1);
+                else counts[(Element)e]++;
+            }
+            int max_count = 0;
+            Element mode_element = Element.Empty;
+            foreach(var kvp in counts)
+            {
+                if(kvp.Value > max_count)
+                {
+                    max_count = kvp.Value;
+                    mode_element = kvp.Key;
+                }
+            }
+            Debug.Log("max element " + mode_element);
+            state = mode_element;
+        }
         NativeList<(int, float3x12, int4x4)>.ParallelWriter element_vertices_and_triangles = this.vertices_and_triangles_writers[(int)state];
         element_vertices_and_triangles.AddNoResize(((int, float3x12, int4x4))result);
     }
@@ -112,7 +136,7 @@ public struct BuildVoxelWorldMeshMarchingCubes : IJobParallelFor
         
 
         /* Cube is entirely inside or outside of the surface */
-        if (this.native_edgeTable[bitvector] == 0)
+        if (bitvector == 0 || bitvector == 255)
         {
             // do not draw
             return null;
