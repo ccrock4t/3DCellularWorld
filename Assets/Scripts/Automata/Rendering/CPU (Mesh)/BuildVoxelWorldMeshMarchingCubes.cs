@@ -50,7 +50,6 @@ public struct BuildVoxelWorldMeshMarchingCubes : IJobParallelFor
     public void CreateMesh(int i, int3 index)
     {
         Element state = (Element)GetVoxelType(index.x, index.y, index.z);
-        if (state == Element.Empty) return; // if there is no element, no need to place any vertices
 
         // otherwise, we need to place some vertices
         Element?[] voxelCube = new Element?[8];
@@ -155,7 +154,7 @@ public struct BuildVoxelWorldMeshMarchingCubes : IJobParallelFor
 
     float GetVoxelIsolevel(Element? voxel)
     {
-        return (voxel == Element.Empty || voxel == null) ? 0.99999f : 0.49999f;
+        return (voxel == Element.Empty || voxel == null) ? 1.0f : 0.0f;
     }
 
     int pow2(int i)
